@@ -1,78 +1,279 @@
 # app.py
 
+import os
+from typing import Optional
+
 from fasthtml.common import *
-from fastapi import FastAPI
-from os import getenv
+from fastapi import FastAPI, Request
 from starlette.staticfiles import StaticFiles
 
+# Import our modular pages
+from pages.home import home_page
+from pages.tasks import tasks_page, handle_task_form
+from pages.all_tasks import all_tasks_page
+from pages.categories import categories_page
+from pages.tags import tags_page
+from pages.next import next_page
+from pages.notifications import notifications_page
+from pages.settings import settings_page
+from utils.backend import BackendClient
+from utils.components import nav, shell
 
-BACKEND = getenv("BACKEND_URL", "http://localhost:8000")
-
+# Configuration
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+# Initialize FastAPI app
 app = FastAPI(title="Tasks Frontend")
-htmx = Script(src="https://unpkg.com/htmx.org@1.9.12")
-sakura = Link(rel="stylesheet", href="https://unpkg.com/sakura.css/css/sakura.css")
-
+# Static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# Initialize backend client
+backend = BackendClient(BACKEND_URL)
 
 
-def nav():
-    return Nav(Ul(
-        Li(A("Home", href="/app")),
-        Li(A("Tasks", href="/app/tasks")),
-        Li(A("All", href="/app/all")),
-        Li(A("Categories", href="/app/categories")),
-        Li(A("Tags", href="/app/tags")),
-        Li(A("Next 48h", href="/app/next")),
-        Li(A("Notifications", href="/app/notifications")),
-        Li(A("Settings", href="/app/settings")),
-    ))
-
-
-def shell(content):
-    return Html(Head(Title("Tasks UI"), sakura, htmx, Link(rel="manifest", href="/static/manifest.webmanifest")),
-                Body(nav(), Div(content, id="content")))
-
-
+# Routes
 @app.get("/app")
 def home():
-    return shell(Section(H1("Welcome"), P("Use the navigation to explore the app.")))
+    return home_page()
 
 
 @app.get("/app/tasks")
 def tasks():
-    form = Form(
-        Input(type="text", name="title", placeholder="Task title"),
-        Button("Add", type="submit"),
-        action=f"{BACKEND}/api/tasks", method="post", target="_blank"
-    )
-    return shell(Section(H2("Tasks"), form, P("Use API directly for now. This is a thin UI.")))
+    return tasks_page(backend)
+
+
+@app.post("/app/tasks")
+async def create_task(request: Request):
+    return await handle_task_form(request, backend)
 
 
 @app.get("/app/all")
 def all_tasks():
-    return shell(Section(H2("All Tasks"), P("List view could be implemented with HTMX swaps.")))
+    return all_tasks_page(backend)
 
 
 @app.get("/app/categories")
 def categories():
-    return shell(Section(H2("Categories"), P("Create/list categories using backend API.")))
+    return categories_page(backend)
 
 
 @app.get("/app/tags")
 def tags():
-    return shell(Section(H2("Tags"), P("Create/list tags using backend API.")))
+    return tags_page(backend)
 
 
 @app.get("/app/next")
 def next48h():
-    return shell(Section(H2("Next 48h"), P("Fetch from /api/tasks/next?hours=48")))
+    return next_page(backend)
 
 
 @app.get("/app/notifications")
 def notifications():
-    return shell(Section(H2("Notifications"), P("Trigger backend cron and view logs.")))
+    return notifications_page(backend)
 
 
 @app.get("/app/settings")
 def settings():
-    return shell(Section(H2("Settings"), P("Edit runtime config and templates via API.")))
+    return settings_page(backend)
+
+
+# Additional route handlers for HTMX interactions
+@app.post("/app/categories/create")
+async def create_category_handler(request: Request):
+    from pages.categories import handle_category_creation
+    return await handle_category_creation(request, backend)
+
+
+@app.post("/app/tags/create")
+async def create_tag_handler(request: Request):
+    from pages.tags import handle_tag_creation
+    return await handle_tag_creation(request, backend)
+
+
+@app.get("/app/tags/cloud")
+async def tag_cloud_handler():
+    from pages.tags import render_tag_cloud
+    try:
+        tags = await backend.get_tags()
+        return render_tag_cloud(tags)
+    except Exception as e:
+        return Div(f"Error loading tag cloud: {str(e)}", class_="error-message")
+
+
+@app.get("/app/next/overdue")
+async def overdue_tasks_handler():
+    from pages.next import render_overdue_tasks
+    return await render_overdue_tasks(backend)
+
+
+@app.post("/app/notifications/trigger")
+async def trigger_notifications_handler():
+    from pages.notifications import trigger_notifications
+    return await trigger_notifications(backend)
+
+
+@app.post("/app/notifications/test-email")
+async def test_email_handler():
+    from pages.notifications import test_email_config
+    return await test_email_config(backend)
+
+
+@app.get("/app/notifications/status")
+async def notification_status_handler():
+    from pages.notifications import render_system_status
+    return await render_system_status(backend)
+
+
+@app.put("/app/settings/general")
+async def general_settings_handler(request: Request):
+    from pages.settings import handle_general_settings
+    return await handle_general_settings(request, backend)
+
+
+@app.put("/app/settings/email")
+async def email_settings_handler(request: Request):
+    from pages.settings import handle_email_settings
+    return await handle_email_settings(request, backend)
+
+
+@app.put("/app/settings/template/{template_type}")
+async def template_settings_handler(request: Request, template_type: str):
+    from pages.settings import handle_template_settings
+    return await handle_template_settings(request, backend, template_type)
+
+
+@app.get("/app/settings/system-info")
+async def system_info_handler():
+    from pages.settings import render_system_info
+    return await render_system_info(backend)
+
+
+@app.post("/app/settings/import")
+async def import_data_handler(request: Request):
+    from pages.settings import handle_data_import
+    return await handle_data_import(request, backend)
+
+
+@app.post("/app/settings/reset")
+async def reset_settings_handler():
+    from pages.settings import reset_settings
+    return await reset_settings(backend)
+
+
+# API proxy endpoints for HTMX calls
+@app.get("/api/tasks")
+async def get_tasks(completed: Optional[bool] = None, limit: Optional[int] = None):
+    """Proxy to backend for tasks list"""
+    try:
+        tasks = await backend.get_tasks(completed=completed)
+        if limit:
+            tasks = tasks[:limit]        
+        # Return HTML for HTMX
+        from utils.components import task_card
+        if not tasks:
+            return Div(P("No tasks found."))
+        task_elements = [task_card(task) for task in tasks]
+        return Div(*task_elements)
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Error loading tasks: {str(e)}")
+
+
+@app.get("/api/tasks/next")
+async def get_next_tasks(hours: int = 48):
+    """Get tasks due in next N hours"""
+    try:
+        from pages.next import render_upcoming_tasks
+        return await render_upcoming_tasks(backend, hours)
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Error loading upcoming tasks: {str(e)}")
+
+
+@app.get("/api/categories")
+async def get_categories():
+    """Proxy to backend for categories list"""
+    try:
+        categories = await backend.get_categories()
+        from pages.categories import render_category_card        
+        if not categories:
+            return Div(P("No categories found."))
+        category_elements = [render_category_card(cat) for cat in categories]
+        return Div(*category_elements)
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Error loading categories: {str(e)}")
+
+
+@app.get("/api/tags")
+async def get_tags():
+    """Proxy to backend for tags list"""
+    try:
+        tags = await backend.get_tags()
+        from pages.tags import render_tag_card        
+        if not tags:
+            return Div(P("No tags found."))
+        tag_elements = [render_tag_card(tag) for tag in tags]
+        return Div(*tag_elements)
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Error loading tags: {str(e)}")
+
+
+@app.get("/api/notifications/logs")
+async def get_notification_logs():
+    """Get notification logs"""
+    try:
+        from pages.notifications import render_notification_logs
+        return await render_notification_logs(backend)
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Error loading logs: {str(e)}")
+
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: str):
+    """Proxy to backend for task deletion"""
+    try:
+        await backend.delete_task(task_id)
+        return Div()  # Return empty div to replace the deleted task
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Failed to delete task: {str(e)}")
+
+
+@app.put("/api/tasks/{task_id}/complete")
+async def complete_task(task_id: str):
+    """Proxy to backend for task completion"""
+    try:
+        updated_task = await backend.complete_task(task_id)
+        from utils.components import task_card
+        return task_card(updated_task)
+    except Exception as e:
+        from utils.components import error_message
+
+        return error_message(f"Failed to complete task: {str(e)}")
+
+@app.delete("/api/categories/{category_id}")
+async def delete_category(category_id: str):
+    """Delete a category"""
+    try:
+        await backend.delete_category(category_id)
+        return Div()  # Return empty div to replace deleted category
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Failed to delete category: {str(e)}")
+
+
+@app.delete("/api/tags/{tag_id}")
+async def delete_tag(tag_id: str):
+    """Delete a tag"""
+    try:
+        await backend.delete_tag(tag_id)
+        return Div()  # Return empty div to replace deleted tag
+    except Exception as e:
+        from utils.components import error_message
+        return error_message(f"Failed to delete tag: {str(e)}")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8080)
