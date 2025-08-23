@@ -79,7 +79,7 @@ def all_tasks_page(backend: BackendClient):
                 }
             ),
             Button(
-                "Delete Completed", 
+                "Delete All Completed", 
                 **{                                                         # type: ignore
                     "hx-delete": "/api/tasks/completed",
                     "hx-confirm": "Delete all completed tasks? This cannot be undone.",

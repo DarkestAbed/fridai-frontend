@@ -181,9 +181,9 @@ async def render_overdue_tasks(backend: BackendClient):
                     P(
                         overdue_text,
                         style="""
-                        color: #dc3545;
-                        font-weight: bold;
-                        margin-bottom: 0.5rem;
+                            color: #dc3545;
+                            font-weight: bold;
+                            margin-bottom: 0.5rem;
                         """
                     ),
                     task_elem

@@ -85,12 +85,12 @@ def render_category_card(category):
     return Div(
         Div(
             style=f"""
-            width: 20px;
-            height: 20px;
-            background-color: {category.get('color', '#3498db')};
-            border-radius: 3px;
-            display: inline-block;
-            margin-right: 10px;
+                width: 20px;
+                height: 20px;
+                background-color: {category.get('color', '#3498db')};
+                border-radius: 3px;
+                display: inline-block;
+                margin-right: 10px;
             """
         ),
         H4(
