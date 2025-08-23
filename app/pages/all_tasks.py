@@ -1,8 +1,9 @@
 # pages/all_tasks.py
 
 from fasthtml.common import *
-from utils.components import shell, task_card, loading_spinner
-from utils.backend import BackendClient
+
+from app.utils.components import shell, task_card
+from app.utils.backend import BackendClient
 
 
 def all_tasks_page(backend: BackendClient):

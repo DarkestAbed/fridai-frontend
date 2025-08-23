@@ -79,7 +79,7 @@ def shell(content):
             Title("Tasks UI"),
             sakura,
             htmx,
-            Link(rel="manifest", href="/static/manifest.webmanifest"),
+            # Link(rel="manifest", href="/static/manifest.webmanifest"),
             Style("""
                 .task-item {
                     border: 1px solid #ddd;
@@ -146,11 +146,11 @@ def shell(content):
                     console.error('HTMX Error:', evt.detail);
                     alert('An error occurred. Please try again.');
                 });
-                
                 document.body.addEventListener('htmx:afterSwap', function(evt) {
                     console.log('Content swapped successfully');
                 });
-            """)
+            """
+            )
         )
     )
 

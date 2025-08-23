@@ -1,10 +1,15 @@
 # pages/tasks.py
 
-import asyncio
 from fastapi import Request
 from fasthtml.common import *
-from utils.components import shell, form_field, error_message, success_message
-from utils.backend import BackendClient
+
+from app.utils.components import (
+    shell,
+    form_field,
+    error_message,
+    success_message,
+)
+from app.utils.backend import BackendClient
 
 
 def tasks_page(backend: BackendClient):

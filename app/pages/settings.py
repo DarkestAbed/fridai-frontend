@@ -1,8 +1,14 @@
 # pages/settings.py
 
 from fasthtml.common import *
-from utils.components import shell, form_field, success_message, error_message
-from utils.backend import BackendClient
+
+from app.utils.components import (
+    shell,
+    form_field,
+    success_message,
+    error_message,
+)
+from app.utils.backend import BackendClient
 
 
 def settings_page(backend: BackendClient):

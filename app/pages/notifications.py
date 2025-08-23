@@ -1,9 +1,10 @@
 # pages/notifications.py
 
-from fasthtml.common import *
-from utils.components import shell, success_message, error_message
-from utils.backend import BackendClient
 from datetime import datetime
+from fasthtml.common import *
+
+from app.utils.components import shell, success_message, error_message
+from app.utils.backend import BackendClient
 
 
 def notifications_page(backend: BackendClient):

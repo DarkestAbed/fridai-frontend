@@ -1,9 +1,10 @@
 # pages/next.py
 
-from fasthtml.common import *
-from utils.components import shell, task_card
-from utils.backend import BackendClient
 from datetime import datetime
+from fasthtml.common import *
+
+from app.utils.components import shell, task_card
+from app.utils.backend import BackendClient
 
 
 def next_page(backend: BackendClient):

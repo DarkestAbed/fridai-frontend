@@ -1,7 +1,8 @@
 # pages/home.py
 
 from fasthtml.common import *
-from utils.components import shell
+
+from app.utils.components import shell
 
 
 def home_page():
