@@ -1,13 +1,12 @@
 # app.py
 
-import os
-
 from fasthtml.common import *
 from fastapi import FastAPI
+from os import getenv
 from starlette.staticfiles import StaticFiles
 
 
-BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
+BACKEND = getenv("BACKEND_URL", "http://localhost:8000")
 
 app = FastAPI(title="Tasks Frontend")
 htmx = Script(src="https://unpkg.com/htmx.org@1.9.12")
