@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from fasthtml import ft
-# from fasthtml.common import *
 from typing import Dict, Any
 
 
