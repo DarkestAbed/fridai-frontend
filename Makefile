@@ -1,6 +1,6 @@
 # frontend/Makefile — Build & push to GHCR
 
-REGISTRY ?= ghcr.io/<OWNER>
+REGISTRY ?= ghcr.io/darkestabed
 IMAGE    ?= fridai-frontend
 TAG      ?= latest
 
