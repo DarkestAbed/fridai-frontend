@@ -2,7 +2,9 @@
 
 from datetime import datetime
 from fasthtml import ft
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+
+from app.i18n import t
 
 
 def nav():
@@ -10,7 +12,7 @@ def nav():
     return ft.Nav(
         ft.Div(
             ft.A(
-                "Task Manager",
+                t("nav.brand"),
                 href="/app",
                 **{
                     "class": "contrast",
@@ -22,67 +24,50 @@ def nav():
         ft.Ul(
             ft.Li(
                 ft.A(
-                    "Home",
+                    t("nav.home"),
                     href="/app",
-                    # **{
-                    #     "hx-get": "/app",
-                    #     "hx-target": "#content",
-                    # },
                 ),
             ),
             ft.Li(
                 ft.A(
-                    "Tasks",
+                    t("nav.tasks"),
                     href="/app/tasks",
-                    # **{
-                    #     "hx-get": "/app/tasks",
-                    #     "hx-target": "#content",
-                    # },
                 )
             ),
             ft.Li(
                 ft.A(
-                    "All Tasks",
+                    t("nav.all_tasks"),
                     href="/app/all",
-                    # **{
-                    #     "hx-get": "/app/all",
-                    #     "hx-target": "#content"
-                    # }
                 )
             ),
             ft.Li(
                 ft.A(
-                    "Categories",
+                    t("nav.categories"),
                     href="/app/categories",
-                    # **{"hx-get": "/app/categories", "hx-target": "#content"}
                 )
             ),
             ft.Li(
                 ft.A(
-                    "Tags",
+                    t("nav.tags"),
                     href="/app/tags",
-                    # **{"hx-get": "/app/tags", "hx-target": "#content"}
                 )
             ),
             ft.Li(
                 ft.A(
-                    "Next 48h",
+                    t("nav.next_48h"),
                     href="/app/next",
-                    # **{"hx-get": "/app/next", "hx-target": "#content"}
                 )
             ),
             ft.Li(
                 ft.A(
-                    "Notifications",
+                    t("nav.notifications"),
                     href="/app/notifications",
-                    # **{"hx-get": "/app/notifications", "hx-target": "#content"}
                 )
             ),
             ft.Li(
                 ft.A(
-                    "Settings",
+                    t("nav.settings"),
                     href="/app/settings",
-                    # **{"hx-get": "/app/settings", "hx-target": "#content"}
                 )
             ),
             ft.Li(
@@ -93,7 +78,7 @@ def nav():
                         "class": "contrast",
                         "style": "padding: 0.5rem; min-width: auto;",
                         "onclick": "toggleTheme()",
-                        "aria-label": "Toggle theme"
+                        "aria-label": t("nav.theme_toggle_label")
                     }
                 )
             )
@@ -115,9 +100,16 @@ def shell(content):
     """Main page shell with navigation, PicoCSS, and dark mode support"""
     htmx = ft.Script(src="https://unpkg.com/htmx.org@1.9.12")
     pico = ft.Link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css")
+
+    # Pre-render JS strings from i18n
+    js_switch_to_light = t("nav.switch_to_light")
+    js_switch_to_dark = t("nav.switch_to_dark")
+    js_switch_to_manual = t("nav.switch_to_manual")
+    js_htmx_error = t("errors.htmx_error")
+
     return ft.Html(
         ft.Head(
-            ft.Title("Tasks UI"),
+            ft.Title(t("shared.app_title")),
             ft.Meta(charset="utf-8"),
             ft.Meta(
                 name="viewport",
@@ -131,7 +123,7 @@ def shell(content):
                 :root {
                     --spacing: 1rem;
                 }
-                
+
                 /* Navigation styles */
                 nav ul {
                     list-style: none;
@@ -141,22 +133,22 @@ def shell(content):
                     gap: 1rem;
                     align-items: center;
                 }
-                
+
                 nav ul li {
                     margin: 0;
                 }
-                
+
                 nav ul li a {
                     text-decoration: none;
                     padding: 0.5rem 1rem;
                     border-radius: var(--border-radius);
                     transition: background-color 0.2s;
                 }
-                
+
                 nav ul li a:hover {
                     background-color: var(--secondary-hover);
                 }
-                
+
                 /* Task card styles */
                 .task-item {
                     border: 1px solid var(--muted-border-color);
@@ -166,43 +158,43 @@ def shell(content):
                     background-color: var(--card-background-color);
                     transition: box-shadow 0.2s;
                 }
-                
+
                 .task-item:hover {
                     box-shadow: var(--card-box-shadow);
                 }
-                
+
                 .task-completed {
                     opacity: 0.6;
                 }
-                
+
                 .task-completed h4 {
                     text-decoration: line-through;
                 }
-                
+
                 .task-actions {
                     margin-top: var(--spacing);
                     display: flex;
                     gap: 0.5rem;
                 }
-                
+
                 .task-actions button {
                     font-size: 0.875rem;
                     padding: 0.25rem 0.75rem;
                 }
-                
+
                 /* Priority indicators */
                 .priority-high {
                     border-left: 4px solid var(--del-color);
                 }
-                
+
                 .priority-medium {
                     border-left: 4px solid var(--mark-color);
                 }
-                
+
                 .priority-low {
                     border-left: 4px solid var(--ins-color);
                 }
-                
+
                 /* Tags and categories */
                 .tag {
                     background-color: var(--secondary);
@@ -213,12 +205,12 @@ def shell(content):
                     margin: 0.1rem;
                     display: inline-block;
                 }
-                
+
                 .category {
                     color: var(--muted-color);
                     font-style: italic;
                 }
-                
+
                 /* Form sections */
                 .form-section {
                     background-color: var(--card-background-color);
@@ -227,7 +219,7 @@ def shell(content):
                     border-radius: var(--border-radius);
                     border: 1px solid var(--muted-border-color);
                 }
-                
+
                 /* Messages */
                 .error-message {
                     color: var(--del-color);
@@ -238,7 +230,7 @@ def shell(content):
                     margin: 0.5rem 0;
                     border: 1px solid var(--del-color);
                 }
-                
+
                 .success-message {
                     color: var(--ins-color);
                     background-color: color-mix(in srgb, var(--ins-color) 10%, transparent);
@@ -247,7 +239,7 @@ def shell(content):
                     margin: 0.5rem 0;
                     border: 1px solid var(--ins-color);
                 }
-                
+
                 /* Category and tag cards */
                 .category-card, .tag-card {
                     background-color: var(--card-background-color);
@@ -256,118 +248,118 @@ def shell(content):
                     margin: 0.5rem 0;
                     border-radius: var(--border-radius);
                 }
-                
+
                 /* Container adjustments */
                 #content {
                     padding: 2rem;
                     max-width: 1200px;
                     margin: 0 auto;
                 }
-                
+
                 /* Responsive adjustments */
                 @media (max-width: 768px) {
                     nav {
                         flex-direction: column;
                         align-items: flex-start;
                     }
-                    
+
                     nav ul {
                         flex-wrap: wrap;
                         margin-top: 1rem;
                     }
-                    
+
                     nav ul li a {
                         padding: 0.25rem 0.5rem;
                         font-size: 0.9rem;
                     }
                 }
-                
+
                 /* Loading spinner */
                 .loading {
                     text-align: center;
                     padding: 2rem;
                     color: var(--muted-color);
                 }
-                
+
                 /* Grid layouts */
                 .grid-2 {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
                     gap: var(--spacing);
                 }
-                
+
                 /* Theme toggle animation */
                 #theme-toggle {
                     transition: transform 0.3s;
                 }
-                
+
                 #theme-toggle:hover {
                     transform: rotate(20deg);
                 }
             """
             ),
             ft.Script(
-                """
+                f"""
                 // Theme management
-                function getStoredTheme() {
+                function getStoredTheme() {{
                     return localStorage.getItem('theme') || 'dark';
-                }
-                
-                function setTheme(theme) {
-                    if (theme === 'auto') {
+                }}
+
+                function setTheme(theme) {{
+                    if (theme === 'auto') {{
                         // Remove data-theme to use system preference
                         document.documentElement.removeAttribute('data-theme');
-                    } else {
+                    }} else {{
                         document.documentElement.setAttribute('data-theme', theme);
-                    }
+                    }}
                     localStorage.setItem('theme', theme);
                     updateThemeToggle(theme);
-                }
-                
-                function updateThemeToggle(theme) {
+                }}
+
+                function updateThemeToggle(theme) {{
                     const toggle = document.getElementById('theme-toggle');
-                    if (toggle) {
-                        if (theme === 'dark') {
+                    if (toggle) {{
+                        if (theme === 'dark') {{
                             toggle.textContent = '🌙';
-                            toggle.setAttribute('aria-label', 'Switch to light mode');
-                        } else if (theme === 'light') {
+                            toggle.setAttribute('aria-label', '{js_switch_to_light}');
+                        }} else if (theme === 'light') {{
                             toggle.textContent = '☀️';
-                            toggle.setAttribute('aria-label', 'Switch to dark mode');
-                        } else {
+                            toggle.setAttribute('aria-label', '{js_switch_to_dark}');
+                        }} else {{
                             toggle.textContent = '🌓';
-                            toggle.setAttribute('aria-label', 'Switch to manual theme');
-                        }
-                    }
-                }
-                
-                function toggleTheme() {
+                            toggle.setAttribute('aria-label', '{js_switch_to_manual}');
+                        }}
+                    }}
+                }}
+
+                function toggleTheme() {{
                     const currentTheme = getStoredTheme();
                     let newTheme;
-                    
-                    if (currentTheme === 'dark') {
+
+                    if (currentTheme === 'dark') {{
                         newTheme = 'light';
-                    } else if (currentTheme === 'light') {
+                    }} else if (currentTheme === 'light') {{
                         newTheme = 'auto';
-                    } else {
+                    }} else {{
                         newTheme = 'dark';
-                    }
-                    
+                    }}
+
                     setTheme(newTheme);
-                }
-                
+                }}
+
                 // Initialize theme on page load
-                document.addEventListener('DOMContentLoaded', function() {
+                document.addEventListener('DOMContentLoaded', function() {{
                     const storedTheme = getStoredTheme();
                     setTheme(storedTheme);
-                });
-                
+                }});
+
                 // Set initial theme immediately (before DOMContentLoaded)
-                (function() {
+                (function() {{
                     const theme = getStoredTheme();
-                    if (theme !== 'auto') {
+                    if (theme !== 'auto') {{
                         document.documentElement.setAttribute('data-theme', theme);
-                    }
-                })();
+                    }}
+                }})();
                 """
             ),
         ),
@@ -378,30 +370,29 @@ def shell(content):
                 **{"class": "container-fluid"}          # type: ignore
             ),
             ft.Script(
-                """
+                f"""
                     // HTMX event handlers
-                    document.body.addEventListener('htmx:responseError', function(evt) {
+                    document.body.addEventListener('htmx:responseError', function(evt) {{
                         console.error('HTMX Error:', evt.detail);
                         const errorMsg = document.createElement('div');
                         errorMsg.className = 'error-message';
-                        errorMsg.textContent = 'An error occurred. Please try again.';
+                        errorMsg.textContent = '{js_htmx_error}';
                         errorMsg.style.position = 'fixed';
                         errorMsg.style.top = '20px';
                         errorMsg.style.right = '20px';
                         errorMsg.style.zIndex = '9999';
                         document.body.appendChild(errorMsg);
                         setTimeout(() => errorMsg.remove(), 5000);
-                    });
-                    
-                    document.body.addEventListener('htmx:afterSwap', function(evt) {
-                        console.log('Content swapped successfully');
-                        // Re-initialize any components if needed
-                    });
-                    
+                    }});
+
+                    document.body.addEventListener('htmx:afterSwap', function(evt) {{
+                        evt.detail.elt.removeAttribute('aria-busy');
+                    }});
+
                     // Preserve theme across HTMX navigations
-                    document.body.addEventListener('htmx:configRequest', function(evt) {
+                    document.body.addEventListener('htmx:configRequest', function(evt) {{
                         evt.detail.headers['X-Theme'] = getStoredTheme();
-                    });
+                    }});
                 """
             ),
         ),
@@ -409,27 +400,37 @@ def shell(content):
     )
 
 
-def task_card(task: Dict[str, Any]) -> Any:
-    """Render a task as a card component"""
+def task_card(
+    task: Dict[str, Any],
+    category_map: Optional[Dict[int, str]] = None,
+    tag_map: Optional[Dict[int, str]] = None,
+) -> Any:
+    """Render a task as a card component.
+
+    Args:
+        task: Task dict from backend (fields: id, title, description, status,
+              due_at, category_id, tag_ids).
+        category_map: Optional {id: name} lookup for categories.
+        tag_map: Optional {id: name} lookup for tags.
+    """
     task_id = task.get('id', '')
-    title = task.get('title', 'Untitled')
+    title = task.get('title', t("task_card.untitled"))
     description = task.get('description', '')
-    completed = task.get('completed', False)
-    priority = task.get('priority', 'medium')
-    due_date = task.get('due_date')
-    category = task.get('category', {})
-    tags = task.get('tags', [])
+    is_completed = task.get('status') == 'completed'
+    due_at = task.get('due_at')
+    category_id = task.get('category_id')
+    tag_ids = task.get('tag_ids', [])
     # Format due date
     due_text = ""
-    if due_date:
+    if due_at:
         try:
-            due_dt = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
-            due_text = f"Due: {due_dt.strftime('%Y-%m-%d %H:%M')}"
-        except:
-            due_text = f"Due: {due_date}"
+            due_dt = datetime.fromisoformat(str(due_at).replace('Z', '+00:00'))
+            due_text = f"{t('shared.due_prefix')} {due_dt.strftime('%Y-%m-%d %H:%M')}"
+        except Exception:
+            due_text = f"{t('shared.due_prefix')} {due_at}"
     # Task classes
-    task_classes = f"task-item priority-{priority}"
-    if completed:
+    task_classes = "task-item"
+    if is_completed:
         task_classes += " task-completed"
     # Build task content
     content = [
@@ -437,18 +438,31 @@ def task_card(task: Dict[str, Any]) -> Any:
     ]
     if description:
         content.append(ft.P(description))
-    if category.get('name'):
-        content.append(ft.P(f"Category: {category['name']}", class_="category"))
+    if category_id is not None:
+        cat_name = (
+            category_map.get(category_id, f"#{category_id}")
+            if category_map
+            else f"#{category_id}"
+        )
+        content.append(ft.P(f"{t('shared.category_prefix')} {cat_name}", **{"class": "category"}))
     if due_text:
         content.append(ft.P(due_text, style="color: var(--muted-color); font-size: 0.9rem;"))
-    if tags:
-        tag_elements = [ft.Span(tag.get('name', tag), class_="tag") for tag in tags]
-        content.append(ft.Div(*tag_elements, style="margin: 0.5rem 0;"))    
+    if tag_ids:
+        if tag_map:
+            tag_elements = [
+                ft.Span(tag_map.get(tid, f"#{tid}"), **{"class": "tag"})
+                for tid in tag_ids
+            ]
+        else:
+            tag_elements = [
+                ft.Span(f"#{tid}", **{"class": "tag"}) for tid in tag_ids
+            ]
+        content.append(ft.Div(*tag_elements, style="margin: 0.5rem 0;"))
     # Action buttons
-    if not completed:
+    if not is_completed:
         actions = [
             ft.Button(
-                "✓ Complete",
+                t("task_card.complete_button"),
                 **{                                                 # type: ignore
                     "hx-put": f"/api/tasks/{task_id}/complete",
                     "hx-target": "closest .task-item",
@@ -462,18 +476,18 @@ def task_card(task: Dict[str, Any]) -> Any:
         actions = []
     actions.append(
         ft.Button(
-            "🗑 Delete",
+            t("shared.delete"),
             **{                                                     # type: ignore
                 "hx-delete": f"/api/tasks/{task_id}",
                 "hx-target": "closest .task-item",
                 "hx-swap": "outerHTML",
-                "hx-confirm": "Are you sure you want to delete this task?",
+                "hx-confirm": t("task_card.delete_confirm"),
                 "class": "secondary outline",
                 "style": "font-size: 0.875rem;"
             }
         )
     )
-    content.append(ft.Div(*actions, class_="task-actions"))
+    content.append(ft.Div(*actions, **{"class": "task-actions"}))
     return ft.Article(
         *content,
         **{"class": task_classes, "id": f"task-{task_id}"}          # type: ignore
@@ -483,7 +497,7 @@ def task_card(task: Dict[str, Any]) -> Any:
 def loading_spinner():
     """Simple loading indicator"""
     return ft.Div(
-        "Loading...",
+        t("shared.loading"),
         **{"class": "loading", "aria-busy": "true"}                 # type: ignore
     )
 

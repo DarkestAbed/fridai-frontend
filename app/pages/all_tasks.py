@@ -2,7 +2,8 @@
 
 from fasthtml.common import *
 
-from app.utils.components import shell, task_card
+from app.i18n import t
+from app.utils.components import shell, task_card, error_message
 from app.utils.backend import BackendClient
 
 
@@ -10,57 +11,45 @@ def all_tasks_page(backend: BackendClient):
     """Display all tasks with filtering and sorting options"""
     # Filter controls
     filters = Div(
-        H3("Filters & Sorting"),
+        H3(t("all_tasks.filters_title")),
         Form(
             Div(
-                Label("Status:"),
+                Label(t("all_tasks.status_label")),
                 Select(
-                    Option("All", value="all", selected=True),
-                    Option("Active", value="active"),
-                    Option("Completed", value="completed"),
+                    Option(t("all_tasks.status_all"), value="all", selected=True),
+                    Option(t("all_tasks.status_active"), value="pending"),
+                    Option(t("all_tasks.status_completed"), value="completed"),
                     name="status"
                 ),
                 style="display: inline-block; margin-right: 1rem;"
             ),
             Div(
-                Label("Priority:"),
+                Label(t("all_tasks.sort_label")),
                 Select(
-                    Option("All", value="all", selected=True),
-                    Option("High", value="high"),
-                    Option("Medium", value="medium"),
-                    Option("Low", value="low"),
-                    name="priority"
-                ),
-                style="display: inline-block; margin-right: 1rem;"
-            ),
-            Div(
-                Label("Sort by:"),
-                Select(
-                    Option("Created Date", value="created", selected=True),
-                    Option("Due Date", value="due_date"),
-                    Option("Title", value="title"),
-                    Option("Priority", value="priority"),
+                    Option(t("all_tasks.sort_due_date"), value="due_at", selected=True),
+                    Option(t("all_tasks.sort_title"), value="title"),
                     name="sort"
                 ),
                 style="display: inline-block; margin-right: 1rem;"
             ),
-            Button("Apply Filters", type="submit"),
+            Button(t("all_tasks.apply_filters"), type="submit"),
             **{
-                "hx-get": "/app/all",
+                "hx-get": "/app/all/tasks",
                 "hx-target": "#tasks-container",
-                "hx-include": "[name='status'], [name='priority'], [name='sort']"
+                "hx-include": "[name='status'], [name='sort']",
+                "hx-swap": "innerHTML",
             },
         ),
-        class_="form-section"
+        **{"class": "form-section"}
     )
     content = Section(
-        H2("All Tasks"),
-        filters,   
+        H2(t("all_tasks.title")),
+        filters,
         Div(
             Div(
-                "Loading all tasks...", 
+                t("all_tasks.loading_all"),
                 **{                                     # type: ignore
-                    "hx-get": "/api/tasks",
+                    "hx-get": "/app/all/tasks",
                     "hx-trigger": "load",
                     "hx-target": "this",
                     "hx-swap": "innerHTML",
@@ -68,59 +57,43 @@ def all_tasks_page(backend: BackendClient):
             ),
             id="tasks-container"
         ),
-        Div(
-            H3("Quick Actions"),
-            Button(
-                "Mark All Complete", 
-                **{                                                         # type: ignore
-                    "hx-post": "/api/tasks/complete-all",
-                    "hx-confirm": "Mark all active tasks as complete?",
-                    "hx-target": "#tasks-container",
-                }
-            ),
-            Button(
-                "Delete All Completed", 
-                **{                                                         # type: ignore
-                    "hx-delete": "/api/tasks/completed",
-                    "hx-confirm": "Delete all completed tasks? This cannot be undone.",
-                    "hx-target": "#tasks-container",
-                }
-            ),
-            style="margin-top: 2rem;"
-        )
-    )    
+    )
     return shell(content)
 
 
-async def render_tasks_list(backend: BackendClient, status: str = "all", priority: str = "all", sort: str = "created"):
-    """Render filtered and sorted tasks list"""
+async def render_tasks_list(
+    backend: BackendClient,
+    status: str = "all",
+    sort: str = "due_at",
+):
+    """Render filtered and sorted tasks list as an HTML fragment."""
     try:
-        # Get tasks based on status filter
-        if status == "active":
-            tasks = await backend.get_tasks(completed=False)
-        elif status == "completed":
-            tasks = await backend.get_tasks(completed=True)
-        else:
-            tasks = await backend.get_tasks()
-        # Filter by priority if specified
-        if priority != "all":
-            tasks = [t for t in tasks if t.get("priority") == priority]
-        # Sort tasks
-        if sort == "due_date":
-            tasks.sort(key=lambda t: t.get("due_date") or "9999-12-31", reverse=False)
-        elif sort == "title":
-            tasks.sort(key=lambda t: t.get("title", "").lower())
-        elif sort == "priority":
-            priority_order = {"high": 0, "medium": 1, "low": 2}
-            tasks.sort(key=lambda t: priority_order.get(t.get("priority", "medium"), 1))
-        else:  # default to created date
-            tasks.sort(key=lambda t: t.get("created_at", ""), reverse=True)
+        # Map frontend filter to backend param
+        backend_status = None
+        if status in ("pending", "completed"):
+            backend_status = status
+
+        tasks = await backend.get_tasks(status=backend_status)
+
+        # Build lookup maps
+        categories = await backend.get_categories()
+        tags = await backend.get_tags()
+        cat_map = {c['id']: c['name'] for c in categories}
+        tag_map = {tg['id']: tg['name'] for tg in tags}
+
+        # Client-side sort
+        if sort == "title":
+            tasks.sort(key=lambda tk: tk.get("title", "").lower())
+        else:  # default: due_at
+            tasks.sort(key=lambda tk: tk.get("due_at") or "9999-12-31")
+
         if not tasks:
-            return Div(P("No tasks found matching the current filters."))
-        task_elements = [task_card(task) for task in tasks]
+            return Div(P(t("empty_states.no_tasks_filtered")))
+
+        task_elements = [task_card(task, cat_map, tag_map) for task in tasks]
         return Div(
-            P(f"Showing {len(tasks)} task(s)"),
+            P(t("all_tasks.showing_count", count=len(tasks))),
             *task_elements
         )
     except Exception as e:
-        return Div(f"Error loading tasks: {str(e)}", class_="error-message")
+        return error_message(t("errors.loading_tasks", error=str(e)))

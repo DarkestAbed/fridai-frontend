@@ -1,7 +1,9 @@
 # folders
+.pytest_cache/
 .venv/
 __pycache__/
 static/
 # files
 .python-version
+.sesskey
 uv.lock

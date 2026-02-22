@@ -2,6 +2,7 @@
 
 from fasthtml.common import *
 
+from app.i18n import t
 from app.utils.components import shell
 
 
@@ -9,61 +10,25 @@ def home_page():
     """Home page with dashboard overview"""
     content = Section(
         Hgroup(
-            H1("Task Management Dashboard"),
-            P("Welcome to your personal task management system")
+            H1(t("home.title")),
+            P(t("home.subtitle"))
         ),
         Div(
             Article(
-                Header(H3("📋 Quick Actions")),
+                Header(H3(t("home.quick_actions"))),
                 Nav(
                     Ul(
-                        Li(
-                            A(
-                                "➕ Add New Task",
-                                href="/app/tasks",
-                                # **{
-                                #     "hx-get": "/app/tasks",
-                                #     "hx-target": "#content"
-                                # }
-                            )
-                        ),
-                        Li(
-                            A(
-                                "📊 View All Tasks", 
-                                href="/app/all",
-                                # **{
-                                #     "hx-get": "/app/all",
-                                #     "hx-target": "#content"
-                                # }
-                            )
-                        ),
-                        Li(
-                            A(
-                                "⏰ Check Next 48 Hours",
-                                href="/app/next",
-                                # **{
-                                #     "hx-get": "/app/next",
-                                #     "hx-target": "#content"
-                                # }
-                            )
-                        ),
-                        Li(
-                            A(
-                                "🏷️ Manage Categories",
-                                href="/app/categories",
-                                # **{
-                                #     "hx-get": "/app/categories",
-                                #     "hx-target": "#content"
-                                # }
-                            )
-                        ),
+                        Li(A(t("home.add_new_task"), href="/app/tasks")),
+                        Li(A(t("home.view_all_tasks"), href="/app/all")),
+                        Li(A(t("home.check_next_48h"), href="/app/next")),
+                        Li(A(t("home.manage_categories"), href="/app/categories")),
                     )
                 )
             ),
             Article(
-                Header(H3("📅 Recent Activity")),
+                Header(H3(t("home.recent_activity"))),
                 Div(
-                    "Loading recent tasks...",
+                    t("home.loading_recent"),
                     id="recent-tasks",
                     **{                                         # type: ignore
                         "hx-get": "/api/tasks?limit=5",
@@ -79,17 +44,17 @@ def home_page():
             }
         ),
         Article(
-            Header(H3("🔔 System Status")),
+            Header(H3(t("home.system_status"))),
             Div(
                 P(
-                    "✅ All systems operational",
+                    t("home.all_systems_operational"),
                     **{                                         # type: ignore
                         "style": "color: var(--ins-color); font-weight: bold;"
                     }
                 ),
                 Div(
                     Button(
-                        "📧 Trigger Notifications",
+                        t("home.trigger_notifications"),
                         **{                                     # type: ignore
                             "hx-post": "/app/notifications/trigger",
                             "hx-target": "#notification-status",
@@ -97,7 +62,7 @@ def home_page():
                         }
                     ),
                     Button(
-                        "🔄 Refresh Status",
+                        t("home.refresh_status"),
                         **{                                     # type: ignore
                             "onclick": "location.reload()",
                             "class": "secondary",
@@ -110,16 +75,16 @@ def home_page():
             )
         ),
         Details(
-            Summary("📈 Quick Stats"),
+            Summary(t("home.quick_stats")),
             Div(
                 id="quick-stats",
                 **{                                     # type: ignore
-                    "hx-get": "/api/stats/summary",
+                    "hx-get": "/app/stats",
                     "hx-trigger": "toggle once",
                     "aria-busy": "true"
                 },
                 style="padding: 1rem;"
             )
         )
-    )    
+    )
     return shell(content)

@@ -2,6 +2,7 @@
 
 from fasthtml.common import *
 
+from app.i18n import t, available_languages, get_language, set_language
 from app.utils.components import (
     shell,
     form_field,
@@ -13,33 +14,43 @@ from app.utils.backend import BackendClient
 
 def settings_page(backend: BackendClient):
     """Application settings and configuration page"""
+
+    # Build language options
+    current_lang = get_language()
+    lang_options = []
+    for code, display_name in available_languages():
+        if code == current_lang:
+            lang_options.append(Option(display_name, value=code, selected=True))
+        else:
+            lang_options.append(Option(display_name, value=code))
+
     content = Section(
         Hgroup(
-            H2("⚙️ Settings & Configuration"),
-            P("Manage your application preferences and system configuration")
+            H2(t("settings.title")),
+            P(t("settings.subtitle"))
         ),
-        
-        # Theme Settings
+
+        # ── Theme Settings ───────────────────────────────────────────
         Article(
-            Header(H3("🎨 Appearance")),
+            Header(H3(t("settings.appearance"))),
             Div(
-                H4("Theme Settings"),
-                P("Choose your preferred color scheme", style="color: var(--muted-color);"),
+                H4(t("settings.theme_settings")),
+                P(t("settings.theme_subtitle"), style="color: var(--muted-color);"),
                 Div(
                     Button(
-                        "🌙 Dark",
+                        t("settings.theme_dark"),
                         id="theme-dark",
                         onclick="setTheme('dark')",
                         **{"class": "outline", "style": "flex: 1;"}
                     ),
                     Button(
-                        "☀️ Light",
+                        t("settings.theme_light"),
                         id="theme-light",
                         onclick="setTheme('light')",
                         **{"class": "outline", "style": "flex: 1;"}
                     ),
                     Button(
-                        "🌓 Auto (System)",
+                        t("settings.theme_auto"),
                         id="theme-auto",
                         onclick="setTheme('auto')",
                         **{"class": "outline", "style": "flex: 1;"}
@@ -48,42 +59,33 @@ def settings_page(backend: BackendClient):
                 ),
                 Div(
                     P(
-                        "Current theme: ",
+                        t("settings.current_theme"),
                         Strong(id="current-theme", style="color: var(--primary);"),
                         style="margin-top: 1rem;"
                     ),
                     Small(
-                        "The 'Auto' option follows your system's dark/light mode preference",
+                        t("settings.auto_hint"),
                         style="color: var(--muted-color);"
                     )
                 ),
                 Script("""
-                    // Update current theme display
                     function updateCurrentThemeDisplay() {
                         const theme = localStorage.getItem('theme') || 'dark';
                         const themeDisplay = document.getElementById('current-theme');
                         if (themeDisplay) {
-                            const themeText = theme.charAt(0).toUpperCase() + theme.slice(1);
-                            themeDisplay.textContent = themeText;
+                            themeDisplay.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
                         }
-                        
-                        // Update button states
                         document.querySelectorAll('[id^="theme-"]').forEach(btn => {
                             btn.classList.remove('primary');
                             btn.classList.add('outline');
                         });
-                        
                         const activeBtn = document.getElementById('theme-' + theme);
                         if (activeBtn) {
                             activeBtn.classList.remove('outline');
                             activeBtn.classList.add('primary');
                         }
                     }
-                    
-                    // Update on load
                     document.addEventListener('DOMContentLoaded', updateCurrentThemeDisplay);
-                    
-                    // Override setTheme to update display
                     const originalSetTheme = window.setTheme;
                     window.setTheme = function(theme) {
                         originalSetTheme(theme);
@@ -92,42 +94,30 @@ def settings_page(backend: BackendClient):
                 """)
             )
         ),
-        
+
         Hr(),
-        
-        # General Settings
+
+        # ── General Settings ─────────────────────────────────────────
         Article(
-            Header(H3("⚡ General Settings")),
+            Header(H3(t("settings.general_title"))),
             Form(
-                Div(
-                    form_field("Default Task Priority", Select(
-                        Option("🟢 Low", value="low"),
-                        Option("🟡 Medium", value="medium", selected=True),
-                        Option("🔴 High", value="high"),
-                        name="default_priority"
-                    )),
-                    form_field("Time Zone", Select(
-                        Option("UTC", value="UTC"),
-                        Option("America/Santiago", value="America/Santiago", selected=True),
-                        Option("America/New_York", value="America/New_York"),
-                        Option("America/Los_Angeles", value="America/Los_Angeles"),
-                        Option("Europe/London", value="Europe/London"),
-                        Option("Europe/Paris", value="Europe/Paris"),
-                        Option("Asia/Tokyo", value="Asia/Tokyo"),
-                        Option("Asia/Shanghai", value="Asia/Shanghai"),
-                        Option("Australia/Sydney", value="Australia/Sydney"),
-                        name="timezone"
-                    )),
-                    **{"class": "grid"}
-                ),
-                form_field("Date Format", Select(
-                    Option("YYYY-MM-DD", value="%Y-%m-%d", selected=True),
-                    Option("DD/MM/YYYY", value="%d/%m/%Y"),
-                    Option("MM/DD/YYYY", value="%m/%d/%Y"),
-                    Option("DD.MM.YYYY", value="%d.%m.%Y"),
-                    name="date_format"
+                form_field(t("settings.timezone_label"), Select(
+                    Option("UTC", value="UTC"),
+                    Option("America/Santiago", value="America/Santiago", selected=True),
+                    Option("America/New_York", value="America/New_York"),
+                    Option("America/Los_Angeles", value="America/Los_Angeles"),
+                    Option("Europe/London", value="Europe/London"),
+                    Option("Europe/Paris", value="Europe/Paris"),
+                    Option("Asia/Tokyo", value="Asia/Tokyo"),
+                    Option("Asia/Shanghai", value="Asia/Shanghai"),
+                    Option("Australia/Sydney", value="Australia/Sydney"),
+                    name="timezone"
                 )),
-                Button("💾 Save General Settings", type="submit", **{"class": "primary"}),
+                form_field(t("settings.language_label"), Select(
+                    *lang_options,
+                    name="language"
+                )),
+                Button(t("settings.save_general"), type="submit", **{"class": "primary"}),
                 **{
                     "hx-put": "/app/settings/general",
                     "hx-target": "#general-settings-response",
@@ -136,218 +126,71 @@ def settings_page(backend: BackendClient):
             ),
             Div(id="general-settings-response")
         ),
-        
+
         Hr(),
-        
-        # Email Configuration
-        Article(
-            Header(H3("📧 Email Configuration")),
-            Form(
-                Div(
-                    form_field(
-                        "SMTP Server",
-                        Input(
-                            type="text",
-                            name="smtp_server",
-                            placeholder="smtp.gmail.com"
-                        )
-                    ),
-                    form_field(
-                        "SMTP Port",
-                        Input(
-                            type="number",
-                            name="smtp_port",
-                            value="587",
-                            min="1",
-                            max="65535"
-                        )
-                    ),
-                    **{"class": "grid"}
-                ),
-                Div(
-                    form_field(
-                        "Email Address",
-                        Input(
-                            type="email",
-                            name="email_address",
-                            placeholder="your@email.com"
-                        )
-                    ),
-                    form_field(
-                        "Email Password",
-                        Input(
-                            type="password",
-                            name="email_password",
-                            placeholder="App password or SMTP password"
-                        )
-                    ),
-                    **{"class": "grid"}
-                ),
-                Fieldset(
-                    Label(
-                        Input(type="checkbox", name="use_tls", checked=True, role="switch"),
-                        "Use TLS encryption"
-                    ),
-                    Label(
-                        Input(type="checkbox", name="email_notifications", role="switch"),
-                        "Enable email notifications"
-                    )
-                ),
-                Div(
-                    Button("💾 Save Email Settings", type="submit", **{"class": "primary"}),
-                    Button(
-                        "🧪 Test Connection",
-                        type="button",
-                        **{
-                            "hx-post": "/app/settings/test-email",
-                            "hx-target": "#email-settings-response",
-                            "class": "secondary"
-                        }
-                    ),
-                    **{"class": "grid", "style": "gap: 0.5rem;"}
-                ),
-                **{
-                    "hx-put": "/app/settings/email",
-                    "hx-target": "#email-settings-response",
-                    "hx-swap": "innerHTML"
-                }
-            ),
-            Div(id="email-settings-response")
-        ),
-        
-        Hr(),
-        
-        # Notification Templates
+
+        # ── Notification Templates ───────────────────────────────────
         Article(
             Header(
-                H3("📝 Notification Templates"),
-                P("Customize email templates for different notification types", style="color: var(--muted-color);")
+                H3(t("settings.templates_title")),
+                P(t("settings.templates_subtitle"), style="color: var(--muted-color);")
             ),
             Details(
-                Summary("Due Task Notification Template"),
+                Summary(t("settings.due_soon_template")),
                 Form(
                     form_field(
-                        "Subject Template",
-                        Input(
-                            type="text",
-                            name="due_subject",
-                            value="🔔 Task Due: {task_title}",
-                            style="width: 100%;"
-                        )
-                    ),
-                    form_field(
-                        "Email Body Template",
+                        t("settings.template_body_label"),
                         Textarea(
                             name="due_body",
-                            rows="10",
+                            rows="8",
                             style="width: 100%; font-family: monospace;",
-                            value="""Hello!
-
-Your task "{task_title}" is due on {due_date}.
-
-Description: {task_description}
-Priority: {task_priority}
-Category: {task_category}
-
-Please complete it as soon as possible.
-
-Best regards,
-Your Task Manager"""
                         )
                     ),
                     Small(
-                        "Available variables: {task_title}, {task_description}, {due_date}, {task_priority}, {task_category}",
+                        t("settings.due_soon_vars"),
                         style="color: var(--muted-color); display: block; margin-bottom: 1rem;"
                     ),
-                    Button("💾 Save Template", type="submit", **{"class": "primary"}),
+                    Button(t("settings.save_template"), type="submit", **{"class": "primary"}),
                     **{
-                        "hx-put": "/app/settings/template/due",
+                        "hx-put": "/app/settings/template/due_soon",
                         "hx-target": "#template-response",
                         "hx-swap": "innerHTML",
                     }
                 ),
-                Div(id="template-response")
-            )
-        ),
-        
-        Hr(),
-        
-        # Data Management
-        Article(
-            Header(
-                H3("💾 Data Management"),
-                P("Import, export, and manage your task data", style="color: var(--muted-color);")
             ),
-            
             Details(
-                Summary("📥 Export Data"),
-                Div(
-                    P("Download your data in JSON format", style="color: var(--muted-color);"),
-                    Div(
-                        Button(
-                            "📋 Export All Tasks",
-                            **{
-                                "hx-get": "/api/export/tasks",
-                                "hx-target": "#export-response",
-                                "class": "outline"
-                            }
-                        ),
-                        Button(
-                            "🏷️ Export Categories",
-                            **{
-                                "hx-get": "/api/export/categories",
-                                "hx-target": "#export-response",
-                                "class": "outline"
-                            }
-                        ),
-                        Button(
-                            "⚙️ Export Settings",
-                            **{
-                                "hx-get": "/api/export/settings",
-                                "hx-target": "#export-response",
-                                "class": "outline"
-                            }
-                        ),
-                        **{"class": "grid", "style": "gap: 0.5rem; margin-top: 1rem;"}
-                    )
-                )
-            ),
-            
-            Details(
-                Summary("📤 Import Data"),
+                Summary(t("settings.overdue_template")),
                 Form(
-                    P("Upload JSON or CSV files to import data", style="color: var(--muted-color);"),
-                    Input(
-                        type="file",
-                        name="import_file",
-                        accept=".json,.csv",
-                        required=True
+                    form_field(
+                        t("settings.template_body_label"),
+                        Textarea(
+                            name="overdue_body",
+                            rows="8",
+                            style="width: 100%; font-family: monospace;",
+                        )
                     ),
-                    Button("📤 Import File", type="submit", **{"class": "primary", "style": "margin-top: 1rem; width: 100%;"}),
+                    Small(
+                        t("settings.overdue_vars"),
+                        style="color: var(--muted-color); display: block; margin-bottom: 1rem;"
+                    ),
+                    Button(t("settings.save_template"), type="submit", **{"class": "primary"}),
                     **{
-                        "hx-post": "/app/settings/import",
-                        "hx-encoding": "multipart/form-data",
-                        "hx-target": "#import-response",
-                        "hx-swap": "innerHTML"
+                        "hx-put": "/app/settings/template/overdue",
+                        "hx-target": "#template-response",
+                        "hx-swap": "innerHTML",
                     }
                 ),
-                Small(
-                    "⚠️ Importing data may overwrite existing records",
-                    style="color: var(--mark-color); display: block; margin-top: 0.5rem;"
-                )
             ),
-            
-            Div(id="export-response", style="margin-top: 1rem;"),
-            Div(id="import-response", style="margin-top: 1rem;")
+            Div(id="template-response")
         ),
-        
+
         Hr(),
-        
-        # System Information
+
+        # ── System Information ───────────────────────────────────────
         Article(
-            Header(H3("📊 System Information")),
+            Header(H3(t("settings.system_info"))),
             Div(
-                "Loading system info...",
+                t("settings.loading_system_info"),
                 id="system-info",
                 **{
                     "hx-get": "/app/settings/system-info",
@@ -357,66 +200,34 @@ Your Task Manager"""
                 }
             )
         ),
-        
+
         Hr(),
-        
-        # Danger Zone
+
+        # ── Danger Zone ──────────────────────────────────────────────
         Article(
             Header(
-                Strong("⚠️ Danger Zone", style="color: var(--del-color);")
+                Strong(t("settings.danger_zone"), style="color: var(--del-color);")
             ),
             P(
-                "⚠️ These actions are irreversible. Please be very careful!",
-                style="color: var(--del-color); font-weight: bold;"
+                t("settings.danger_warning"),
+                style="color: var(--del-color);"
             ),
-            Details(
-                Summary(
-                    Strong("🗑️ Destructive Actions", style="color: var(--del-color);")
-                ),
-                Div(
-                    P(
-                        "Think twice before using these options. All deletions are permanent and cannot be undone.",
-                        style="color: var(--muted-color); margin-bottom: 1rem;"
-                    ),
-                    Div(
-                        Button(
-                            "Delete All Completed Tasks",
-                            **{
-                                "hx-delete": "/api/tasks/completed",
-                                "hx-confirm": "⚠️ WARNING: This will permanently delete ALL completed tasks.\n\nThis action cannot be undone.\n\nAre you absolutely sure?",
-                                "hx-target": "#danger-response",
-                                "class": "secondary"
-                            }
-                        ),
-                        Button(
-                            "Reset All Settings",
-                            **{
-                                "hx-post": "/app/settings/reset",
-                                "hx-confirm": "This will reset all settings to their default values.\n\nYour tasks and data will NOT be affected.\n\nContinue?",
-                                "hx-target": "#danger-response",
-                                "class": "contrast"
-                            }
-                        ),
-                        Button(
-                            "⚠️ Delete All Data",
-                            **{
-                                "hx-delete": "/api/data/all",
-                                "hx-confirm": "🚨 FINAL WARNING 🚨\n\nThis will PERMANENTLY delete:\n• All tasks\n• All categories\n• All tags\n• All settings\n• All notification logs\n\nThis action is COMPLETELY IRREVERSIBLE.\n\nAre you ABSOLUTELY CERTAIN you want to delete everything?",
-                                "hx-target": "#danger-response",
-                                "style": "background-color: var(--del-color); color: white;"
-                            }
-                        ),
-                        **{"class": "grid", "style": "gap: 0.5rem; margin-top: 1rem;"}
-                    ),
-                    Div(id="danger-response", style="margin-top: 1rem;")
-                )
+            Button(
+                t("settings.reset_button"),
+                **{
+                    "hx-post": "/app/settings/reset",
+                    "hx-confirm": t("settings.reset_confirm"),
+                    "hx-target": "#danger-response",
+                    "class": "contrast"
+                }
             ),
+            Div(id="danger-response", style="margin-top: 1rem;"),
             **{
                 "style": "border: 2px solid var(--del-color); border-radius: var(--border-radius); padding: var(--spacing); background-color: color-mix(in srgb, var(--del-color) 5%, transparent);"
             }
         )
     )
-    
+
     return shell(content)
 
 
@@ -424,109 +235,102 @@ async def handle_general_settings(request, backend: BackendClient):
     """Handle general settings form submission"""
     try:
         form_data = await request.form()
+        new_lang = form_data.get("language", "en")
         settings_data = {
-            "default_priority": form_data.get("default_priority", "medium"),
-            "timezone": form_data.get("timezone", "UTC"),
-            "date_format": form_data.get("date_format", "%Y-%m-%d"),
+            "timezone": form_data.get("timezone", "America/Santiago"),
+            "language": new_lang,
         }
-        
         await backend.update_settings(settings_data)
-        return success_message("✅ General settings saved successfully!")
+        # Hot-reload the language for subsequent requests
+        set_language(new_lang)
+        return success_message(t("settings.general_saved"))
     except Exception as e:
-        return error_message(f"❌ Failed to save settings: {str(e)}")
+        return error_message(t("errors.save_settings_failed", error=str(e)))
 
 
-async def handle_email_settings(request, backend: BackendClient):
-    """Handle email configuration form submission"""
-    try:
-        form_data = await request.form()
-        email_settings = {
-            "smtp_server": form_data.get("smtp_server", "").strip(),
-            "smtp_port": int(form_data.get("smtp_port", 587)),
-            "email_address": form_data.get("email_address", "").strip(),
-            "email_password": form_data.get("email_password", "").strip(),
-            "use_tls": form_data.get("use_tls") is not None,
-            "email_notifications": form_data.get("email_notifications") is not None
-        }
-        
-        await backend.update_settings(email_settings)
-        return success_message("✅ Email settings saved successfully!")
-    except Exception as e:
-        return error_message(f"❌ Failed to save email settings: {str(e)}")
-
-
-async def handle_template_settings(request, backend: BackendClient, template_type: str):
+async def handle_template_settings(
+    request, backend: BackendClient, template_type: str
+):
     """Handle notification template form submission"""
     try:
         form_data = await request.form()
-        template_data = {
-            f"{template_type}_template_subject": form_data.get(f"{template_type}_subject", "").strip(),
-            f"{template_type}_template_body": form_data.get(f"{template_type}_body", "").strip(),
-        }
-        
-        await backend.update_settings(template_data)
-        return success_message(f"✅ {template_type.title()} notification template saved successfully!")
+        # The form field name matches the template key suffix
+        body_field = f"{template_type}_body"
+        markdown = form_data.get(body_field, "").strip()
+
+        if not markdown:
+            return error_message(t("errors.template_body_empty"))
+
+        await backend.update_notification_template(template_type, markdown)
+        return success_message(
+            t("settings.template_saved", type=template_type.replace('_', ' ').title())
+        )
     except Exception as e:
-        return error_message(f"❌ Failed to save template: {str(e)}")
+        return error_message(t("errors.save_template_failed", error=str(e)))
 
 
 async def render_system_info(backend: BackendClient):
-    """Render system information"""
+    """Render system information using backend health check and views"""
     try:
-        # Try to get system info from backend
+        # Get backend health
         try:
-            system_info = await backend._request('GET', '/api/system/info')
-        except:
-            # Fallback if endpoint doesn't exist
-            system_info = {
-                "status": "Backend connection successful",
-                "version": "Unknown"
-            }
-        
+            health = await backend.health_check()
+        except Exception:
+            health = {"status": "unreachable", "version": "unknown"}
+
         # Get current settings
         try:
             settings = await backend.get_settings()
-        except:
+        except Exception:
             settings = {}
-        
-        # Get some basic stats
+
+        # Get stats from views
         try:
-            tasks = await backend.get_tasks()
+            status_summary = await backend.get_views_summary('status-summary')
+            pending = sum(s['count'] for s in status_summary if s['key'] == 'pending')
+            completed = sum(s['count'] for s in status_summary if s['key'] == 'completed')
+            total = pending + completed
+        except Exception:
+            pending = completed = total = 0
+
+        try:
             categories = await backend.get_categories()
             tags = await backend.get_tags()
-        except:
-            tasks = []
+        except Exception:
             categories = []
             tags = []
-        
-        active_tasks = len([t for t in tasks if not t.get('completed', False)])
-        completed_tasks = len(tasks) - active_tasks
-        
-        # Create info cards
+
+        notif_enabled = settings.get('notifications_enabled')
         info_cards = [
-            ("🔌 Backend Status", system_info.get("status", "Connected"), "var(--ins-color)"),
-            ("📦 API Version", system_info.get("version", "Unknown"), "var(--primary)"),
-            ("📋 Total Tasks", str(len(tasks)), "var(--primary)"),
-            ("✅ Active Tasks", str(active_tasks), "var(--ins-color)"),
-            ("☑️ Completed Tasks", str(completed_tasks), "var(--muted-color)"),
-            ("🏷️ Categories", str(len(categories)), "var(--primary)"),
-            ("🔖 Tags", str(len(tags)), "var(--primary)"),
-            ("📧 Email Notifications", "Enabled" if settings.get('email_notifications') else "Disabled", 
-             "var(--ins-color)" if settings.get('email_notifications') else "var(--muted-color)"),
-            ("⚡ Default Priority", settings.get('default_priority', 'medium').title(), "var(--mark-color)"),
-            ("🌍 Timezone", settings.get('timezone', 'UTC'), "var(--primary)"),
+            (t("settings.info_backend_status"), health.get("status", "unknown"), "var(--ins-color)"),
+            (t("settings.info_api_version"), health.get("version", "unknown"), "var(--primary)"),
+            (t("settings.info_total_tasks"), str(total), "var(--primary)"),
+            (t("settings.info_active_tasks"), str(pending), "var(--ins-color)"),
+            (t("settings.info_completed"), str(completed), "var(--muted-color)"),
+            (t("settings.info_categories"), str(len(categories)), "var(--primary)"),
+            (t("settings.info_tags"), str(len(tags)), "var(--primary)"),
+            (
+                t("settings.info_notifications"),
+                t("notifications.enabled") if notif_enabled else t("notifications.disabled"),
+                "var(--ins-color)" if notif_enabled else "var(--muted-color)"
+            ),
+            (t("settings.info_timezone"), settings.get('timezone', 'UTC'), "var(--primary)"),
+            (t("settings.info_language"), settings.get('language', 'en'), "var(--primary)"),
         ]
-        
+
         info_elements = []
         for label, value, color in info_cards:
             info_elements.append(
                 Div(
-                    Small(label, style="display: block; color: var(--muted-color); margin-bottom: 0.25rem;"),
+                    Small(
+                        label,
+                        style="display: block; color: var(--muted-color); margin-bottom: 0.25rem;"
+                    ),
                     Strong(value, style=f"color: {color}; font-size: 1.1rem;"),
                     style="padding: 1rem; background-color: var(--card-background-color); border-radius: var(--border-radius); border: 1px solid var(--muted-border-color);"
                 )
             )
-        
+
         return Div(
             *info_elements,
             **{
@@ -535,42 +339,23 @@ async def render_system_info(backend: BackendClient):
             }
         )
     except Exception as e:
-        return error_message(f"❌ Failed to load system information: {str(e)}")
-
-
-async def handle_data_import(request, backend: BackendClient):
-    """Handle file import"""
-    try:
-        # This is a placeholder - actual file handling would need more work
-        form_data = await request.form()
-        file = form_data.get("import_file")
-        
-        if not file:
-            return error_message("❌ No file selected")
-        
-        # Here you would process the file
-        # For now, return a placeholder message
-        return success_message("✅ Import functionality would process your file here.")
-    except Exception as e:
-        return error_message(f"❌ Import failed: {str(e)}")
+        return error_message(t("errors.loading_system_info", error=str(e)))
 
 
 async def reset_settings(backend: BackendClient):
     """Reset all settings to defaults"""
     try:
         default_settings = {
-            "default_priority": "medium",
-            "timezone": "UTC",
-            "date_format": "%Y-%m-%d",
-            "email_notifications": False,
-            "smtp_server": "",
-            "smtp_port": 587,
-            "email_address": "",
-            "email_password": "",
-            "use_tls": True,
+            "timezone": "America/Santiago",
+            "theme": "light",
+            "notifications_enabled": True,
+            "near_due_hours": 24,
+            "scheduler_interval_seconds": 60,
+            "ntfy_topics": "",
+            "language": "en",
         }
-        
         await backend.update_settings(default_settings)
-        return success_message("✅ All settings have been reset to defaults.")
+        set_language("en")
+        return success_message(t("settings.reset_success"))
     except Exception as e:
-        return error_message(f"❌ Failed to reset settings: {str(e)}")
+        return error_message(t("errors.reset_settings_failed", error=str(e)))
